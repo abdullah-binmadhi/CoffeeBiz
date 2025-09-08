@@ -122,6 +122,36 @@ async function resetDatabase() {
   }
 }
 
+// Optimize database performance
+async function optimizeDatabase() {
+  console.log('⚡ Optimizing database performance...');
+  
+  const db = new DatabaseConnection();
+  
+  try {
+    // Run the performance optimization migration
+    console.log('📦 Running performance optimization migration...');
+    const migrationRunner = new MigrationRunner(db);
+    await migrationRunner.runMigrations();
+
+    // Refresh materialized views
+    console.log('🔄 Refreshing materialized views...');
+    await db.query('SELECT refresh_all_materialized_views()');
+
+    // Analyze tables for query optimization
+    console.log('📊 Analyzing tables for query optimization...');
+    await db.query('SELECT analyze_query_performance()');
+
+    console.log('✅ Database optimization completed successfully!');
+    
+  } catch (error) {
+    console.error('❌ Database optimization failed:', error);
+    process.exit(1);
+  } finally {
+    await db.close();
+  }
+}
+
 // Command line interface
 const command = process.argv[2];
 
@@ -132,10 +162,27 @@ switch (command) {
   case 'reset':
     resetDatabase();
     break;
+  case 'migrate':
+    (async () => {
+      const db = new DatabaseConnection();
+      try {
+        const migrationRunner = new MigrationRunner(db);
+        await migrationRunner.runMigrations();
+        console.log('✅ Migrations completed');
+      } finally {
+        await db.close();
+      }
+    })();
+    break;
+  case 'optimize':
+    optimizeDatabase();
+    break;
   default:
-    console.log('Usage: ts-node setup.ts [setup|reset]');
-    console.log('  setup - Initialize database with migrations and seed data');
-    console.log('  reset - Drop all tables and reinitialize database');
+    console.log('Usage: ts-node setup.ts [setup|reset|migrate|optimize]');
+    console.log('  setup    - Initialize database with migrations and seed data');
+    console.log('  reset    - Drop all tables and reinitialize database');
+    console.log('  migrate  - Run pending migrations only');
+    console.log('  optimize - Run performance optimizations and refresh views');
     process.exit(1);
 }
 

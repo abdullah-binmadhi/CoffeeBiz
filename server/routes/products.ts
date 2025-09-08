@@ -2,11 +2,21 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { query } from '../services/database';
 import { createError } from '../middleware/errorHandler';
 import { format, subDays } from 'date-fns';
+import { cacheMiddleware, CacheConfigs } from '../middleware/cache';
+import { CacheKeys } from '../services/cache';
 
 const router = Router();
 
 // GET /api/products/performance - Get product performance metrics
-router.get('/performance', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/performance', cacheMiddleware({
+  ...CacheConfigs.products,
+  keyGenerator: (req) => CacheKeys.products.performance(
+    req.query.startDate as string || subDays(new Date(), 30).toISOString().split('T')[0],
+    req.query.endDate as string || new Date().toISOString().split('T')[0],
+    parseInt(req.query.limit as string) || 10,
+    req.query.sortBy as string || 'revenue'
+  )
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startDate, endDate, limit = 10, sortBy = 'revenue' } = req.query;
     

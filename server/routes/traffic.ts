@@ -2,11 +2,20 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { query } from '../services/database';
 import { createError } from '../middleware/errorHandler';
 import { format, subDays, getDay } from 'date-fns';
+import { cacheMiddleware, CacheConfigs } from '../middleware/cache';
+import { CacheKeys } from '../services/cache';
 
 const router = Router();
 
 // GET /api/traffic/hourly - Get hourly traffic patterns
-router.get('/hourly', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/hourly', cacheMiddleware({
+  ...CacheConfigs.traffic,
+  keyGenerator: (req) => CacheKeys.traffic.hourly(
+    req.query.startDate as string || subDays(new Date(), 7).toISOString().split('T')[0],
+    req.query.endDate as string || new Date().toISOString().split('T')[0],
+    req.query.dayOfWeek as string
+  )
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startDate, endDate, dayOfWeek } = req.query;
     

@@ -2,11 +2,20 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { query } from '../services/database';
 import { createError } from '../middleware/errorHandler';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { cacheMiddleware, CacheConfigs } from '../middleware/cache';
+import { CacheKeys } from '../services/cache';
 
 const router = Router();
 
 // GET /api/revenue/metrics - Get revenue metrics with date range
-router.get('/metrics', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/metrics', cacheMiddleware({
+  ...CacheConfigs.revenue,
+  keyGenerator: (req) => CacheKeys.revenue.metrics(
+    req.query.startDate as string || subDays(new Date(), 30).toISOString().split('T')[0],
+    req.query.endDate as string || new Date().toISOString().split('T')[0],
+    req.query.period as string
+  )
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startDate, endDate, period = 'daily' } = req.query;
     
@@ -109,7 +118,13 @@ router.get('/metrics', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // GET /api/revenue/trends - Get revenue trends by period
-router.get('/trends', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/trends', cacheMiddleware({
+  ...CacheConfigs.revenue,
+  keyGenerator: (req) => CacheKeys.revenue.trends(
+    req.query.period as string || 'daily',
+    parseInt(req.query.limit as string) || 30
+  )
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { period = 'daily', limit = 30 } = req.query;
     
@@ -166,7 +181,15 @@ router.get('/trends', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // GET /api/revenue/comparison - Compare revenue across different periods
-router.get('/comparison', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/comparison', cacheMiddleware({
+  ...CacheConfigs.revenue,
+  keyGenerator: (req) => CacheKeys.revenue.comparison(
+    req.query.currentStart as string,
+    req.query.currentEnd as string,
+    req.query.compareStart as string,
+    req.query.compareEnd as string
+  )
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { currentStart, currentEnd, compareStart, compareEnd } = req.query;
     
