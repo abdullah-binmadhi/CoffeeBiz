@@ -6,6 +6,7 @@ import TrafficAnalysis from './components/Modules/TrafficAnalysis';
 import CustomerInsights from './components/Modules/CustomerInsights';
 import InventoryManagement from './components/Modules/InventoryManagement';
 import ErrorMessage from './components/UI/ErrorMessage';
+import Toast from './components/UI/Toast';
 import { useAnalytics } from './hooks/useAnalytics';
 
 const App: React.FC = () => {
@@ -18,7 +19,9 @@ const App: React.FC = () => {
     trafficAnalysis, 
     customerInsights,
     refreshData,
-    exportData
+    exportData,
+    toasts,
+    removeToast
   } = useAnalytics();
 
   const renderModule = () => {
@@ -43,13 +46,25 @@ const App: React.FC = () => {
   };
 
   return (
-    <DashboardLayout
-      activeModule={activeModule}
-      onModuleChange={setActiveModule}
-      isLoading={isLoading}
-    >
-      {renderModule()}
-    </DashboardLayout>
+    <>
+      <DashboardLayout
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isLoading={isLoading}
+      >
+        {renderModule()}
+      </DashboardLayout>
+      
+      {/* Toast Notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+    </>
   );
 };
 

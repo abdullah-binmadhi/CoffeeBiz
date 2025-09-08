@@ -1,4 +1,96 @@
-// Core data types based on the CSV structure
+// Database entity types
+export interface Customer {
+  id: string;
+  cardNumber?: string;
+  firstSeenAt: Date;
+  lastSeenAt: Date;
+  totalVisits: number;
+  totalSpent: number;
+  preferredPaymentMethod?: PaymentMethod;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  basePrice?: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  // Computed fields for analytics
+  averagePrice?: number;
+  totalSales?: number;
+  totalRevenue?: number;
+}
+
+export interface Transaction {
+  id: string;
+  transactionDate: Date;
+  transactionDatetime: Date;
+  customerId?: string;
+  productId: string;
+  paymentMethod: PaymentMethod;
+  cardNumber?: string;
+  amount: number;
+  quantity: number;
+  unitPrice: number;
+  createdAt: Date;
+  // Relations
+  customer?: Customer;
+  product?: Product;
+}
+
+export interface DailyRevenueSummary {
+  summaryDate: Date;
+  totalRevenue: number;
+  transactionCount: number;
+  cashRevenue: number;
+  cardRevenue: number;
+  cashTransactions: number;
+  cardTransactions: number;
+  averageTransactionValue: number;
+  uniqueCustomers: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProductPerformanceSummary {
+  productId: string;
+  summaryDate: Date;
+  totalSales: number;
+  totalRevenue: number;
+  averagePrice: number;
+  createdAt: Date;
+  updatedAt: Date;
+  product?: Product;
+}
+
+export interface HourlyTrafficSummary {
+  summaryDate: Date;
+  hourOfDay: number;
+  transactionCount: number;
+  totalRevenue: number;
+  uniqueCustomers: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Enums
+export type PaymentMethod = 'cash' | 'card';
+
+export enum ProductCategory {
+  ESPRESSO = 'espresso',
+  LATTE = 'latte',
+  AMERICANO = 'americano',
+  HOT_CHOCOLATE = 'hot_chocolate',
+  TEA = 'tea',
+  SPECIALTY = 'specialty',
+  OTHER = 'other'
+}
+
+// Legacy types for CSV processing (keeping for backward compatibility)
 export interface RawTransaction {
   date: string;
   datetime: string;
@@ -12,29 +104,11 @@ export interface ProcessedTransaction {
   id: string;
   date: Date;
   datetime: Date;
-  paymentMethod: 'cash' | 'card';
+  paymentMethod: PaymentMethod;
   customerId?: string;
   amount: number;
   productName: string;
   productCategory: ProductCategory;
-}
-
-export enum ProductCategory {
-  ESPRESSO = 'espresso',
-  LATTE = 'latte',
-  AMERICANO = 'americano',
-  HOT_CHOCOLATE = 'hot_chocolate',
-  TEA = 'tea',
-  SPECIALTY = 'specialty',
-  OTHER = 'other'
-}
-
-export interface Product {
-  name: string;
-  category: ProductCategory;
-  averagePrice: number;
-  totalSales: number;
-  totalRevenue: number;
 }
 
 export interface RevenueMetrics {

@@ -17,14 +17,27 @@ export class DataService {
         fetch('/index_2.csv')
       ]);
 
-      if (!dataset1Response.ok || !dataset2Response.ok) {
-        throw new Error('Failed to load datasets');
+      if (!dataset1Response.ok) {
+        throw new Error(`Failed to load dataset 1: ${dataset1Response.status} ${dataset1Response.statusText}`);
+      }
+      
+      if (!dataset2Response.ok) {
+        throw new Error(`Failed to load dataset 2: ${dataset2Response.status} ${dataset2Response.statusText}`);
       }
 
       const [csv1Content, csv2Content] = await Promise.all([
         dataset1Response.text(),
         dataset2Response.text()
       ]);
+
+      // Basic content validation
+      if (!csv1Content || csv1Content.trim().length === 0) {
+        throw new Error('Dataset 1 is empty or corrupted');
+      }
+      
+      if (!csv2Content || csv2Content.trim().length === 0) {
+        throw new Error('Dataset 2 is empty or corrupted');
+      }
 
       // Process both datasets
       const [transactions1, transactions2] = await Promise.all([
@@ -35,6 +48,10 @@ export class DataService {
       // Combine the datasets
       const allTransactions = [...transactions1, ...transactions2];
       
+      if (allTransactions.length === 0) {
+        throw new Error('No valid transactions found in either dataset');
+      }
+      
       // Sort by datetime
       allTransactions.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
 
@@ -42,9 +59,21 @@ export class DataService {
       await this.dataProcessor.loadCSVData(this.combineCSVContent(csv1Content, csv2Content));
       
       this.isLoaded = true;
-      console.log(`Loaded ${allTransactions.length} transactions from datasets`);
+      console.log(`Successfully loaded ${allTransactions.length} transactions from datasets`);
     } catch (error) {
       console.error('Error loading datasets:', error);
+      
+      // Provide more user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          throw new Error('Unable to load data files. Please check your internet connection and try again.');
+        } else if (error.message.includes('404')) {
+          throw new Error('Data files not found. Please ensure the CSV files are available.');
+        } else if (error.message.includes('empty') || error.message.includes('corrupted')) {
+          throw new Error('Data files appear to be empty or corrupted. Please check your data files.');
+        }
+      }
+      
       throw error;
     }
   }
@@ -116,33 +145,69 @@ export class DataService {
       return { isValid: false, errors };
     }
 
+    let invalidCount = 0;
+    const maxErrorsToShow = 5; // Limit error messages to avoid overwhelming users
+
     // Check for required fields
     transactions.forEach((transaction, index) => {
+      if (invalidCount >= maxErrorsToShow) return;
+
       if (!transaction.datetime || isNaN(transaction.datetime.getTime())) {
-        errors.push(`Invalid datetime at transaction ${index + 1}`);
+        errors.push(`Invalid date/time in row ${index + 1}`);
+        invalidCount++;
       }
       
       if (!transaction.amount || transaction.amount <= 0) {
-        errors.push(`Invalid amount at transaction ${index + 1}`);
+        errors.push(`Invalid amount in row ${index + 1}: ${transaction.amount}`);
+        invalidCount++;
       }
       
       if (!transaction.productName || transaction.productName.trim() === '') {
-        errors.push(`Missing product name at transaction ${index + 1}`);
+        errors.push(`Missing product name in row ${index + 1}`);
+        invalidCount++;
       }
       
       if (!['cash', 'card'].includes(transaction.paymentMethod)) {
-        errors.push(`Invalid payment method at transaction ${index + 1}`);
+        errors.push(`Invalid payment method in row ${index + 1}: ${transaction.paymentMethod}`);
+        invalidCount++;
       }
     });
 
-    // Check date range
-    const dates = transactions.map(t => t.datetime).sort((a, b) => a.getTime() - b.getTime());
-    const dateRange = {
-      start: dates[0],
-      end: dates[dates.length - 1]
-    };
+    // Add summary if there are more errors
+    const totalInvalidTransactions = transactions.filter(t => 
+      !t.datetime || isNaN(t.datetime.getTime()) ||
+      !t.amount || t.amount <= 0 ||
+      !t.productName || t.productName.trim() === '' ||
+      !['cash', 'card'].includes(t.paymentMethod)
+    ).length;
 
-    console.log(`Data validation: ${transactions.length} transactions from ${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`);
+    if (totalInvalidTransactions > maxErrorsToShow) {
+      errors.push(`... and ${totalInvalidTransactions - maxErrorsToShow} more invalid transactions`);
+    }
+
+    // Check date range
+    const validTransactions = transactions.filter(t => 
+      t.datetime && !isNaN(t.datetime.getTime())
+    );
+
+    if (validTransactions.length > 0) {
+      const dates = validTransactions.map(t => t.datetime).sort((a, b) => a.getTime() - b.getTime());
+      const dateRange = {
+        start: dates[0],
+        end: dates[dates.length - 1]
+      };
+
+      console.log(`Data validation: ${validTransactions.length} valid transactions from ${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`);
+      
+      // Warn if data is too old or too recent
+      const now = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(now.getFullYear() - 1);
+      
+      if (dateRange.end < oneYearAgo) {
+        errors.push('Warning: Data appears to be more than one year old');
+      }
+    }
 
     return {
       isValid: errors.length === 0,

@@ -6,6 +6,7 @@ import {
   TrafficAnalysis, 
   CustomerInsights 
 } from '../types';
+import { useToast } from './useToast';
 
 export const useAnalytics = () => {
   const [dataService] = useState(() => new DataService());
@@ -15,6 +16,7 @@ export const useAnalytics = () => {
   const [productPerformance, setProductPerformance] = useState<ProductPerformance | null>(null);
   const [trafficAnalysis, setTrafficAnalysis] = useState<TrafficAnalysis | null>(null);
   const [customerInsights, setCustomerInsights] = useState<CustomerInsights | null>(null);
+  const { showSuccess, showError, toasts, removeToast } = useToast();
 
   useEffect(() => {
     loadData();
@@ -66,7 +68,10 @@ export const useAnalytics = () => {
   };
 
   const exportData = async (dataType: 'revenue' | 'products' | 'traffic' | 'customers') => {
-    if (!dataService.isDataLoaded()) return;
+    if (!dataService.isDataLoaded()) {
+      setError('Please wait for data to load before exporting');
+      return;
+    }
 
     try {
       const processor = dataService.getDataProcessor();
@@ -123,10 +128,20 @@ export const useAnalytics = () => {
           break;
       }
 
-      if (data.length > 0) {
-        await dataService.exportToCSV(data, filename);
+      if (data.length === 0) {
+        setError(`No ${dataType} data available for export`);
+        return;
       }
+
+      await dataService.exportToCSV(data, filename);
+      
+      // Show success notification
+      showSuccess(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} data exported successfully!`);
+      setError(null);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Export failed';
+      setError(errorMessage);
+      showError('Failed to export data. Please try again.');
       console.error('Export error:', err);
     }
   };
@@ -139,6 +154,8 @@ export const useAnalytics = () => {
     trafficAnalysis,
     customerInsights,
     refreshData,
-    exportData
+    exportData,
+    toasts,
+    removeToast
   };
 };
