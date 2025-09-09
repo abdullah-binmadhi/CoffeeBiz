@@ -31,7 +31,14 @@ const App: React.FC = () => {
     if (error) {
       return (
         <ErrorMessage 
-          error={{ message: error, userMessage: error }} 
+          error={{ 
+            type: 'UNKNOWN_ERROR' as any,
+            message: error, 
+            userMessage: error,
+            timestamp: new Date(),
+            recoverable: true,
+            retryable: true
+          }} 
           onRetry={refreshData}
           showTimestamp={true}
         />

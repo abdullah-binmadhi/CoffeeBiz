@@ -1,4 +1,4 @@
-import { RevenueMetrics, ProductPerformance, TrafficAnalysis, CustomerInsights } from '../types';
+import { RevenueMetrics, ProductPerformance, TrafficAnalysis, CustomerInsights, ProductCategory } from '../types';
 
 // Mock revenue data
 export const mockRevenueMetrics: RevenueMetrics = {
@@ -29,7 +29,7 @@ export const mockProductPerformance: ProductPerformance = {
     {
       id: '1',
       name: 'Cappuccino Large',
-      category: 'latte',
+      category: ProductCategory.LATTE,
       totalSales: 485,
       totalRevenue: 21825.00,
       averagePrice: 4.50,
@@ -40,7 +40,7 @@ export const mockProductPerformance: ProductPerformance = {
     {
       id: '2', 
       name: 'Americano Medium',
-      category: 'americano',
+      category: ProductCategory.AMERICANO,
       totalSales: 392,
       totalRevenue: 15680.00,
       averagePrice: 4.00,
@@ -51,7 +51,7 @@ export const mockProductPerformance: ProductPerformance = {
     {
       id: '3',
       name: 'Latte Large',
-      category: 'latte',
+      category: ProductCategory.LATTE,
       totalSales: 358,
       totalRevenue: 17900.00,
       averagePrice: 5.00,
@@ -62,7 +62,7 @@ export const mockProductPerformance: ProductPerformance = {
     {
       id: '4',
       name: 'Espresso Double',
-      category: 'espresso',
+      category: ProductCategory.ESPRESSO,
       totalSales: 275,
       totalRevenue: 8250.00,
       averagePrice: 3.00,
@@ -73,7 +73,7 @@ export const mockProductPerformance: ProductPerformance = {
     {
       id: '5',
       name: 'Hot Chocolate',
-      category: 'hot_chocolate',
+      category: ProductCategory.HOT_CHOCOLATE,
       totalSales: 198,
       totalRevenue: 8910.00,
       averagePrice: 4.50,
@@ -84,42 +84,42 @@ export const mockProductPerformance: ProductPerformance = {
   ],
   categoryPerformance: [
     {
-      category: 'latte',
+      category: ProductCategory.LATTE,
       revenue: 39725.00,
       count: 843,
       averagePrice: 4.71,
       percentage: 31.7
     },
     {
-      category: 'americano',
+      category: ProductCategory.AMERICANO,
       revenue: 28340.00,
       count: 672,
       averagePrice: 4.22,
       percentage: 22.6
     },
     {
-      category: 'espresso',
+      category: ProductCategory.ESPRESSO,
       revenue: 18750.00,
       count: 485,
       averagePrice: 3.87,
       percentage: 14.9
     },
     {
-      category: 'hot_chocolate',
+      category: ProductCategory.HOT_CHOCOLATE,
       revenue: 15890.00,
       count: 342,
       averagePrice: 4.65,
       percentage: 12.7
     },
     {
-      category: 'tea',
+      category: ProductCategory.TEA,
       revenue: 12480.00,
       count: 398,
       averagePrice: 3.14,
       percentage: 9.9
     },
     {
-      category: 'specialty',
+      category: ProductCategory.SPECIALTY,
       revenue: 10245.50,
       count: 107,
       averagePrice: 9.58,
