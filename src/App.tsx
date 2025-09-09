@@ -8,7 +8,7 @@ import InventoryManagement from './components/Modules/InventoryManagement';
 import ErrorMessage from './components/UI/ErrorMessage';
 import ErrorBoundary from './components/UI/ErrorBoundary';
 import Toast from './components/UI/Toast';
-import { useAnalytics } from './hooks/useAnalytics';
+import { useApiAnalytics } from './hooks/useApiAnalytics';
 
 const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<ModuleType>('revenue');
@@ -19,18 +19,19 @@ const App: React.FC = () => {
     productPerformance, 
     trafficAnalysis, 
     customerInsights,
+    inventoryData,
     refreshData,
     exportData,
     toasts,
     removeToast
-  } = useAnalytics();
+  } = useApiAnalytics();
 
   const renderModule = () => {
     if (error) {
       return (
         <ErrorMessage 
-          error={error} 
-          onRetry={error.retryable ? refreshData : undefined}
+          error={{ message: error, userMessage: error }} 
+          onRetry={refreshData}
           showTimestamp={true}
         />
       );
@@ -46,7 +47,7 @@ const App: React.FC = () => {
       case 'customers':
         return <CustomerInsights data={customerInsights} onExport={() => exportData('customers')} />;
       case 'inventory':
-        return <InventoryManagement data={productPerformance} onExport={() => exportData('products')} />;
+        return <InventoryManagement data={productPerformance} onExport={() => exportData('inventory')} />;
       default:
         return <RevenueAnalytics data={revenueMetrics} onExport={() => exportData('revenue')} />;
     }
