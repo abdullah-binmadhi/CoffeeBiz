@@ -8,7 +8,8 @@ import InventoryManagement from './components/Modules/InventoryManagement';
 import ErrorMessage from './components/UI/ErrorMessage';
 import ErrorBoundary from './components/UI/ErrorBoundary';
 import Toast from './components/UI/Toast';
-import { useApiAnalytics } from './hooks/useApiAnalytics';
+import DataDisplay from './components/UI/DataDisplay';
+import { useMockAnalytics } from './hooks/useMockAnalytics';
 
 const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<ModuleType>('revenue');
@@ -24,7 +25,7 @@ const App: React.FC = () => {
     exportData,
     toasts,
     removeToast
-  } = useApiAnalytics();
+  } = useMockAnalytics();
 
   const renderModule = () => {
     if (error) {
@@ -39,17 +40,17 @@ const App: React.FC = () => {
 
     switch (activeModule) {
       case 'revenue':
-        return <RevenueAnalytics data={revenueMetrics} onExport={() => exportData('revenue')} />;
+        return <DataDisplay title="Revenue Analytics" data={revenueMetrics} />;
       case 'products':
-        return <ProductPerformance data={productPerformance} onExport={() => exportData('products')} />;
+        return <DataDisplay title="Product Performance" data={productPerformance} />;
       case 'traffic':
-        return <TrafficAnalysis data={trafficAnalysis} onExport={() => exportData('traffic')} />;
+        return <DataDisplay title="Traffic Analysis" data={trafficAnalysis} />;
       case 'customers':
-        return <CustomerInsights data={customerInsights} onExport={() => exportData('customers')} />;
+        return <DataDisplay title="Customer Insights" data={customerInsights} />;
       case 'inventory':
-        return <InventoryManagement data={productPerformance} onExport={() => exportData('inventory')} />;
+        return <DataDisplay title="Inventory Management" data={productPerformance} />;
       default:
-        return <RevenueAnalytics data={revenueMetrics} onExport={() => exportData('revenue')} />;
+        return <DataDisplay title="Revenue Analytics" data={revenueMetrics} />;
     }
   };
 
