@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DataService } from '../services/dataService';
 import { 
   RevenueMetrics, 
@@ -7,25 +7,30 @@ import {
   CustomerInsights 
 } from '../types';
 import { useToast } from './useToast';
+import { ErrorHandler, ErrorType, AppError } from '../utils/errorHandler';
 
 export const useAnalytics = () => {
   const [dataService] = useState(() => new DataService());
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [revenueMetrics, setRevenueMetrics] = useState<RevenueMetrics | null>(null);
   const [productPerformance, setProductPerformance] = useState<ProductPerformance | null>(null);
   const [trafficAnalysis, setTrafficAnalysis] = useState<TrafficAnalysis | null>(null);
   const [customerInsights, setCustomerInsights] = useState<CustomerInsights | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { showSuccess, showError, toasts, removeToast } = useToast();
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async (isRetry = false) => {
     try {
       setIsLoading(true);
-      setError(null);
+      if (!isRetry) {
+        setError(null);
+        setRetryCount(0);
+      }
 
       // Load datasets
       await dataService.loadDatasets();
@@ -38,7 +43,13 @@ export const useAnalytics = () => {
       const validation = dataService.validateData(transactions);
       
       if (!validation.isValid) {
-        throw new Error(`Data validation failed: ${validation.errors.join(', ')}`);
+        const validationError = ErrorHandler.createError(
+          ErrorType.DATA_VALIDATION_ERROR,
+          `Data validation failed: ${validation.errors.join(', ')}`,
+          'The loaded data contains errors. Please check your data files and try again.',
+          { validationErrors: validation.errors }
+        );
+        throw validationError;
       }
 
       // Calculate all metrics
@@ -53,23 +64,56 @@ export const useAnalytics = () => {
       setProductPerformance(products);
       setTrafficAnalysis(traffic);
       setCustomerInsights(customers);
+      setError(null);
+      setRetryCount(0);
+
+      if (isRetry) {
+        showSuccess('Data loaded successfully!');
+      }
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
-      setError(errorMessage);
+      const appError = err instanceof Error && 'type' in err && 'userMessage' in err && 'timestamp' in err && 'recoverable' in err && 'retryable' in err
+        ? err as AppError 
+        : ErrorHandler.handleError(err);
+      
+      setError(appError);
       console.error('Analytics loading error:', err);
+      
+      // Show user-friendly error message
+      showError(appError.userMessage);
+      
+      // Auto-retry for retryable errors
+      if (ErrorHandler.shouldRetry(appError, retryCount)) {
+        const delay = ErrorHandler.getRetryDelay(retryCount);
+        setRetryCount(prev => prev + 1);
+        
+        setTimeout(() => {
+          console.log(`Auto-retrying data load (attempt ${retryCount + 1})`);
+          loadData(true);
+        }, delay);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dataService, retryCount, showSuccess, showError]);
 
-  const refreshData = () => {
-    loadData();
-  };
+  const refreshData = useCallback(() => {
+    setRetryCount(0);
+    loadData(false);
+  }, [loadData]);
 
-  const exportData = async (dataType: 'revenue' | 'products' | 'traffic' | 'customers') => {
+  const exportData = useCallback(async (dataType: 'revenue' | 'products' | 'traffic' | 'customers') => {
     if (!dataService.isDataLoaded()) {
-      setError('Please wait for data to load before exporting');
+      const loadingError = ErrorHandler.createError(
+        ErrorType.EXPORT_ERROR,
+        'Data not loaded',
+        'Please wait for data to load before exporting',
+        undefined,
+        true,
+        false
+      );
+      setError(loadingError);
+      showError(loadingError.userMessage);
       return;
     }
 
@@ -129,7 +173,16 @@ export const useAnalytics = () => {
       }
 
       if (data.length === 0) {
-        setError(`No ${dataType} data available for export`);
+        const noDataError = ErrorHandler.createError(
+          ErrorType.EXPORT_ERROR,
+          `No ${dataType} data available`,
+          `No ${dataType} data is available for export. Please ensure data is loaded and try again.`,
+          { dataType },
+          true,
+          false
+        );
+        setError(noDataError);
+        showError(noDataError.userMessage);
         return;
       }
 
@@ -137,14 +190,19 @@ export const useAnalytics = () => {
       
       // Show success notification
       showSuccess(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} data exported successfully!`);
-      setError(null);
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Export failed';
-      setError(errorMessage);
-      showError('Failed to export data. Please try again.');
+      const exportError = ErrorHandler.createError(
+        ErrorType.EXPORT_ERROR,
+        err instanceof Error ? err.message : 'Export failed',
+        'Failed to export data. Please try again or contact support if the problem persists.',
+        { dataType, error: err }
+      );
+      setError(exportError);
+      showError(exportError.userMessage);
       console.error('Export error:', err);
     }
-  };
+  }, [dataService, revenueMetrics, productPerformance, trafficAnalysis, showSuccess, showError]);
 
   return {
     isLoading,

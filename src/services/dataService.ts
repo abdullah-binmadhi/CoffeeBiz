@@ -1,5 +1,6 @@
 import { DataProcessor } from '../utils/dataProcessor';
 import { ProcessedTransaction } from '../types';
+import { ErrorHandler, ErrorType } from '../utils/errorHandler';
 
 export class DataService {
   private dataProcessor: DataProcessor;
@@ -63,18 +64,43 @@ export class DataService {
     } catch (error) {
       console.error('Error loading datasets:', error);
       
-      // Provide more user-friendly error messages
+      // Create appropriate error types based on the error
       if (error instanceof Error) {
-        if (error.message.includes('fetch')) {
-          throw new Error('Unable to load data files. Please check your internet connection and try again.');
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          throw ErrorHandler.createError(
+            ErrorType.NETWORK_ERROR,
+            error.message,
+            'Unable to load data files. Please check your internet connection and try again.',
+            error
+          );
         } else if (error.message.includes('404')) {
-          throw new Error('Data files not found. Please ensure the CSV files are available.');
+          throw ErrorHandler.createError(
+            ErrorType.IMPORT_ERROR,
+            error.message,
+            'Data files not found. Please ensure the CSV files are available.',
+            error,
+            true,
+            false
+          );
         } else if (error.message.includes('empty') || error.message.includes('corrupted')) {
-          throw new Error('Data files appear to be empty or corrupted. Please check your data files.');
+          throw ErrorHandler.createError(
+            ErrorType.DATA_VALIDATION_ERROR,
+            error.message,
+            'Data files appear to be empty or corrupted. Please check your data files.',
+            error,
+            true,
+            false
+          );
         }
       }
       
-      throw error;
+      // Default to import error
+      throw ErrorHandler.createError(
+        ErrorType.IMPORT_ERROR,
+        error instanceof Error ? error.message : 'Unknown error loading datasets',
+        'Failed to load data files. Please try again or contact support.',
+        error
+      );
     }
   }
 
@@ -105,36 +131,62 @@ export class DataService {
   }
 
   async exportToCSV(data: any[], filename: string): Promise<void> {
-    if (data.length === 0) return;
+    try {
+      if (data.length === 0) {
+        throw ErrorHandler.createError(
+          ErrorType.EXPORT_ERROR,
+          'No data to export',
+          'No data is available for export.',
+          undefined,
+          true,
+          false
+        );
+      }
 
-    // Convert data to CSV format
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => 
-        headers.map(header => {
-          const value = row[header];
-          // Handle values that might contain commas
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
-          }
-          return value;
-        }).join(',')
-      )
-    ].join('\n');
+      // Convert data to CSV format
+      const headers = Object.keys(data[0]);
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            // Handle values that might contain commas or quotes
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value ?? '';
+          }).join(',')
+        )
+      ].join('\n');
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      if (error instanceof Error && 'type' in error) {
+        throw error; // Re-throw AppError
+      }
+      
+      throw ErrorHandler.createError(
+        ErrorType.EXPORT_ERROR,
+        error instanceof Error ? error.message : 'Export failed',
+        'Failed to export data. Please try again.',
+        error
+      );
+    }
   }
 
   validateData(transactions: ProcessedTransaction[]): { isValid: boolean; errors: string[] } {

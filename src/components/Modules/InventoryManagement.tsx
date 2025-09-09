@@ -28,10 +28,10 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
   );
 
   // Calculate inventory insights
-  const totalSales = data.topProducts.reduce((sum, product) => sum + product.totalSales, 0);
+  const totalSales = data.topProducts.reduce((sum, product) => sum + (product.totalSales || 0), 0);
   const averageSalesPerProduct = totalSales / data.totalProducts;
-  const highDemandProducts = data.topProducts.filter(p => p.totalSales > averageSalesPerProduct * 1.5);
-  const lowDemandProducts = data.topProducts.filter(p => p.totalSales < averageSalesPerProduct * 0.5);
+  const highDemandProducts = data.topProducts.filter(p => (p.totalSales || 0) > averageSalesPerProduct * 1.5);
+  const lowDemandProducts = data.topProducts.filter(p => (p.totalSales || 0) < averageSalesPerProduct * 0.5);
 
   const getCategoryIcon = (category: ProductCategory): string => {
     switch (category) {
@@ -45,12 +45,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
     }
   };
 
-  const getStockRecommendation = (sales: number): { level: string; color: string; icon: string } => {
-    if (sales > averageSalesPerProduct * 2) {
+  const getStockRecommendation = (sales: number | undefined): { level: string; color: string; icon: string } => {
+    const safeSales = sales || 0;
+    if (safeSales > averageSalesPerProduct * 2) {
       return { level: 'High Stock', color: 'green', icon: '📈' };
-    } else if (sales > averageSalesPerProduct) {
+    } else if (safeSales > averageSalesPerProduct) {
       return { level: 'Medium Stock', color: 'blue', icon: '📊' };
-    } else if (sales > averageSalesPerProduct * 0.5) {
+    } else if (safeSales > averageSalesPerProduct * 0.5) {
       return { level: 'Low Stock', color: 'yellow', icon: '⚠️' };
     } else {
       return { level: 'Minimal Stock', color: 'red', icon: '🔻' };
@@ -111,13 +112,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
                   <span className="text-xl">{getCategoryIcon(product.category)}</span>
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.totalSales} units sold</p>
+                    <p className="text-sm text-gray-500">{product.totalSales || 0} units sold</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${product.totalRevenue.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500">${product.averagePrice.toFixed(2)} avg</p>
+                    <p className="font-semibold text-gray-900">${(product.totalRevenue || 0).toLocaleString()}</p>
+                    <p className="text-sm text-gray-500">${(product.averagePrice || 0).toFixed(2)} avg</p>
                   </div>
                   <div className={`px-3 py-1 rounded-full text-xs font-medium border ${colorClasses[recommendation.color as keyof typeof colorClasses]}`}>
                     {recommendation.icon} {recommendation.level}
@@ -140,12 +141,12 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
                   <span className="text-xl">{getCategoryIcon(product.category)}</span>
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.totalSales} units</p>
+                    <p className="text-sm text-gray-500">{product.totalSales || 0} units</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-green-700">
-                    {((product.totalSales / averageSalesPerProduct) * 100).toFixed(0)}%
+                    {(((product.totalSales || 0) / averageSalesPerProduct) * 100).toFixed(0)}%
                   </p>
                   <p className="text-xs text-gray-500">vs avg</p>
                 </div>
@@ -169,12 +170,12 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
                   <span className="text-xl">{getCategoryIcon(product.category)}</span>
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.totalSales} units</p>
+                    <p className="text-sm text-gray-500">{product.totalSales || 0} units</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-red-700">
-                    {((product.totalSales / averageSalesPerProduct) * 100).toFixed(0)}%
+                    {(((product.totalSales || 0) / averageSalesPerProduct) * 100).toFixed(0)}%
                   </p>
                   <p className="text-xs text-gray-500">vs avg</p>
                 </div>
@@ -195,7 +196,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ data, onExpor
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {data.categoryPerformance.map((category) => {
             const categoryProducts = data.topProducts.filter(p => p.category === category.category);
-            const avgSalesInCategory = categoryProducts.reduce((sum, p) => sum + p.totalSales, 0) / categoryProducts.length;
+            const avgSalesInCategory = categoryProducts.reduce((sum, p) => sum + (p.totalSales || 0), 0) / categoryProducts.length;
             
             return (
               <div key={category.category} className="p-4 border border-gray-200 bg-white rounded-lg">

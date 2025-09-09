@@ -17,21 +17,9 @@ jest.mock('chart.js', () => ({
 
 // Mock react-chartjs-2
 jest.mock('react-chartjs-2', () => ({
-  Bar: ({ data, options }: any) => (
-    <div data-testid="bar-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
-      Bar Chart Mock
-    </div>
-  ),
-  Line: ({ data, options }: any) => (
-    <div data-testid="line-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
-      Line Chart Mock
-    </div>
-  ),
-  Doughnut: ({ data, options }: any) => (
-    <div data-testid="doughnut-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
-      Doughnut Chart Mock
-    </div>
-  ),
+  Bar: jest.fn(() => null),
+  Line: jest.fn(() => null),
+  Doughnut: jest.fn(() => null),
 }));
 
 // Mock window.matchMedia

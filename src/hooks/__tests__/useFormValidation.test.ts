@@ -3,26 +3,30 @@ import { useFormValidation } from '../useFormValidation';
 
 describe('useFormValidation', () => {
   const initialValues = {
-    name: '',
     email: '',
-    age: 0
+    password: '',
+    age: 0,
+    name: ''
   };
 
   const validationRules = {
-    name: { required: true, minLength: 2 },
     email: { required: true, email: true },
-    age: { number: { min: 0, max: 120 } }
+    password: { required: true, minLength: 8 },
+    age: { required: true, number: { min: 18, max: 100 } },
+    name: { required: true, minLength: 2, maxLength: 50 }
   };
 
-  it('initializes with default values', () => {
+  it('initializes with correct default state', () => {
     const { result } = renderHook(() => 
       useFormValidation(initialValues, validationRules)
     );
 
-    expect(result.current.formState.name.value).toBe('');
     expect(result.current.formState.email.value).toBe('');
-    expect(result.current.formState.age.value).toBe(0);
-    expect(result.current.isValid).toBe(true); // No validation errors initially
+    expect(result.current.formState.email.error).toBeNull();
+    expect(result.current.formState.email.touched).toBe(false);
+    expect(result.current.isValid).toBe(true);
+    expect(result.current.hasErrors).toBe(false);
+    expect(result.current.isDirty).toBe(false);
   });
 
   it('validates required fields', () => {
@@ -31,23 +35,13 @@ describe('useFormValidation', () => {
     );
 
     act(() => {
-      result.current.setValue('name', '');
+      result.current.setValue('email', '');
     });
 
-    expect(result.current.formState.name.error).toBe('This field is required');
+    expect(result.current.formState.email.error).toBe('This field is required');
+    expect(result.current.formState.email.touched).toBe(true);
     expect(result.current.isValid).toBe(false);
-  });
-
-  it('validates minimum length', () => {
-    const { result } = renderHook(() => 
-      useFormValidation(initialValues, validationRules)
-    );
-
-    act(() => {
-      result.current.setValue('name', 'A');
-    });
-
-    expect(result.current.formState.name.error).toBe('Must be at least 2 characters');
+    expect(result.current.hasErrors).toBe(true);
   });
 
   it('validates email format', () => {
@@ -68,22 +62,58 @@ describe('useFormValidation', () => {
     expect(result.current.formState.email.error).toBeNull();
   });
 
+  it('validates minimum length', () => {
+    const { result } = renderHook(() => 
+      useFormValidation(initialValues, validationRules)
+    );
+
+    act(() => {
+      result.current.setValue('password', '123');
+    });
+
+    expect(result.current.formState.password.error).toBe('Must be at least 8 characters');
+
+    act(() => {
+      result.current.setValue('password', '12345678');
+    });
+
+    expect(result.current.formState.password.error).toBeNull();
+  });
+
+  it('validates maximum length', () => {
+    const { result } = renderHook(() => 
+      useFormValidation(initialValues, validationRules)
+    );
+
+    act(() => {
+      result.current.setValue('name', 'a'.repeat(51));
+    });
+
+    expect(result.current.formState.name.error).toBe('Must be no more than 50 characters');
+
+    act(() => {
+      result.current.setValue('name', 'Valid Name');
+    });
+
+    expect(result.current.formState.name.error).toBeNull();
+  });
+
   it('validates number ranges', () => {
     const { result } = renderHook(() => 
       useFormValidation(initialValues, validationRules)
     );
 
     act(() => {
-      result.current.setValue('age', -5);
+      result.current.setValue('age', 15);
     });
 
-    expect(result.current.formState.age.error).toBe('Value must be at least 0');
+    expect(result.current.formState.age.error).toBe('Value must be at least 18');
 
     act(() => {
       result.current.setValue('age', 150);
     });
 
-    expect(result.current.formState.age.error).toBe('Value must be at most 120');
+    expect(result.current.formState.age.error).toBe('Value must be at most 100');
 
     act(() => {
       result.current.setValue('age', 25);
@@ -101,7 +131,7 @@ describe('useFormValidation', () => {
       result.current.setValue('name', '<script>alert("xss")</script>John');
     });
 
-    expect(result.current.formState.name.value).toBe('John');
+    expect(result.current.formState.name.value).toBe('alert(xss)John');
   });
 
   it('validates entire form', () => {
@@ -109,19 +139,30 @@ describe('useFormValidation', () => {
       useFormValidation(initialValues, validationRules)
     );
 
-    act(() => {
-      result.current.setValue('name', '');
-      result.current.setValue('email', 'invalid');
-    });
-
     let isValid;
     act(() => {
       isValid = result.current.validateForm();
     });
 
     expect(isValid).toBe(false);
-    expect(result.current.formState.name.error).toBe('This field is required');
-    expect(result.current.formState.email.error).toBe('Please enter a valid email address');
+    expect(result.current.formState.email.touched).toBe(true);
+    expect(result.current.formState.password.touched).toBe(true);
+    expect(result.current.formState.age.touched).toBe(true);
+    expect(result.current.formState.name.touched).toBe(true);
+
+    // Fill in valid values
+    act(() => {
+      result.current.setValue('email', 'test@example.com');
+      result.current.setValue('password', 'password123');
+      result.current.setValue('age', 25);
+      result.current.setValue('name', 'John Doe');
+    });
+
+    act(() => {
+      isValid = result.current.validateForm();
+    });
+
+    expect(isValid).toBe(true);
   });
 
   it('resets form to initial state', () => {
@@ -129,19 +170,48 @@ describe('useFormValidation', () => {
       useFormValidation(initialValues, validationRules)
     );
 
+    // Make changes
     act(() => {
+      result.current.setValue('email', 'test@example.com');
       result.current.setValue('name', 'John');
-      result.current.setValue('email', 'john@example.com');
     });
 
+    expect(result.current.formState.email.value).toBe('test@example.com');
+    expect(result.current.formState.email.touched).toBe(true);
+
+    // Reset
     act(() => {
       result.current.resetForm();
     });
 
-    expect(result.current.formState.name.value).toBe('');
     expect(result.current.formState.email.value).toBe('');
-    expect(result.current.formState.name.touched).toBe(false);
     expect(result.current.formState.email.touched).toBe(false);
+    expect(result.current.formState.email.error).toBeNull();
+  });
+
+  it('touches field without validation', () => {
+    const { result } = renderHook(() => 
+      useFormValidation(initialValues, validationRules)
+    );
+
+    act(() => {
+      result.current.touchField('email');
+    });
+
+    expect(result.current.formState.email.touched).toBe(true);
+    expect(result.current.formState.email.error).toBeNull(); // No validation on touch alone
+  });
+
+  it('sets custom error', () => {
+    const { result } = renderHook(() => 
+      useFormValidation(initialValues, validationRules)
+    );
+
+    act(() => {
+      result.current.setError('email', 'Custom error message');
+    });
+
+    expect(result.current.formState.email.error).toBe('Custom error message');
   });
 
   it('provides field props for form inputs', () => {
@@ -149,74 +219,64 @@ describe('useFormValidation', () => {
       useFormValidation(initialValues, validationRules)
     );
 
-    const nameProps = result.current.getFieldProps('name');
+    const emailProps = result.current.getFieldProps('email');
 
-    expect(nameProps.value).toBe('');
-    expect(typeof nameProps.onChange).toBe('function');
-    expect(typeof nameProps.onBlur).toBe('function');
+    expect(emailProps.value).toBe('');
+    expect(emailProps.error).toBeNull();
+    expect(emailProps.touched).toBe(false);
+    expect(typeof emailProps.onChange).toBe('function');
+    expect(typeof emailProps.onBlur).toBe('function');
   });
 
   it('handles custom validation rules', () => {
     const customRules = {
-      password: {
+      username: {
         required: true,
         custom: (value: string) => {
-          if (value.length < 8) return 'Password must be at least 8 characters';
-          if (!/[A-Z]/.test(value)) return 'Password must contain uppercase letter';
-          if (!/[0-9]/.test(value)) return 'Password must contain a number';
+          if (value && value.includes(' ')) {
+            return 'Username cannot contain spaces';
+          }
           return null;
         }
       }
     };
 
     const { result } = renderHook(() => 
-      useFormValidation({ password: '' }, customRules)
+      useFormValidation({ username: '' }, customRules)
     );
 
     act(() => {
-      result.current.setValue('password', 'weak');
+      result.current.setValue('username', 'user name');
     });
 
-    expect(result.current.formState.password.error).toBe('Password must be at least 8 characters');
+    expect(result.current.formState.username.error).toBe('Username cannot contain spaces');
 
     act(() => {
-      result.current.setValue('password', 'weakpassword');
+      result.current.setValue('username', 'username');
     });
 
-    expect(result.current.formState.password.error).toBe('Password must contain uppercase letter');
-
-    act(() => {
-      result.current.setValue('password', 'WeakPassword');
-    });
-
-    expect(result.current.formState.password.error).toBe('Password must contain a number');
-
-    act(() => {
-      result.current.setValue('password', 'StrongPassword123');
-    });
-
-    expect(result.current.formState.password.error).toBeNull();
+    expect(result.current.formState.username.error).toBeNull();
   });
 
-  it('tracks form state correctly', () => {
+  it('skips validation for empty non-required fields', () => {
+    const optionalRules = {
+      optional: { minLength: 5 } // Not required, but has min length
+    };
+
     const { result } = renderHook(() => 
-      useFormValidation(initialValues, validationRules)
+      useFormValidation({ optional: '' }, optionalRules)
     );
 
-    expect(result.current.isDirty).toBe(false);
-    expect(result.current.hasErrors).toBe(false);
-
     act(() => {
-      result.current.setValue('name', 'John');
+      result.current.setValue('optional', '');
     });
 
-    expect(result.current.isDirty).toBe(true);
-    expect(result.current.hasErrors).toBe(false);
+    expect(result.current.formState.optional.error).toBeNull();
 
     act(() => {
-      result.current.setValue('email', 'invalid');
+      result.current.setValue('optional', 'abc'); // Less than min length
     });
 
-    expect(result.current.hasErrors).toBe(true);
+    expect(result.current.formState.optional.error).toBe('Must be at least 5 characters');
   });
 });

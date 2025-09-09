@@ -25,7 +25,7 @@ export interface FormState {
 
 export const useFormValidation = <T extends Record<string, any>>(
   initialValues: T,
-  validationRules: Record<keyof T, ValidationRule> = {}
+  validationRules: Partial<Record<keyof T, ValidationRule>> = {}
 ) => {
   const [formState, setFormState] = useState<FormState>(() => {
     const state: FormState = {};

@@ -32,7 +32,7 @@ export class DataProcessor {
             reject(error);
           }
         },
-        error: (error) => reject(error)
+        error: (error: any) => reject(error)
       });
     });
   }
@@ -125,15 +125,20 @@ export class DataProcessor {
     this.transactions.forEach(transaction => {
       // Update product stats
       const existing = productMap.get(transaction.productName) || {
+        id: `product-${transaction.productName.toLowerCase().replace(/\s+/g, '-')}`,
         name: transaction.productName,
         category: transaction.productCategory,
+        basePrice: transaction.amount,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         averagePrice: 0,
         totalSales: 0,
         totalRevenue: 0
       };
 
-      existing.totalSales++;
-      existing.totalRevenue += transaction.amount;
+      existing.totalSales = (existing.totalSales || 0) + 1;
+      existing.totalRevenue = (existing.totalRevenue || 0) + transaction.amount;
       existing.averagePrice = existing.totalRevenue / existing.totalSales;
       productMap.set(transaction.productName, existing);
 
@@ -159,7 +164,7 @@ export class DataProcessor {
     });
 
     const topProducts = Array.from(productMap.values())
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+      .sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0));
 
     const categoryPerformance = Array.from(categoryMap.values())
       .sort((a, b) => b.revenue - a.revenue);

@@ -25,7 +25,7 @@ const ProductPerformance: React.FC<ProductPerformanceProps> = ({ data, onExport 
     datasets: [
       {
         label: 'Revenue',
-        data: data.topProducts.slice(0, 8).map(p => p.totalRevenue),
+        data: data.topProducts.slice(0, 8).map(p => p.totalRevenue || 0),
         backgroundColor: [
           'rgba(159, 122, 234, 0.8)',
           'rgba(34, 197, 94, 0.8)',
@@ -77,7 +77,7 @@ const ProductPerformance: React.FC<ProductPerformanceProps> = ({ data, onExport 
   );
 
   const totalRevenue = data.categoryPerformance.reduce((sum, cat) => sum + cat.revenue, 0);
-  const totalSales = data.topProducts.reduce((sum, product) => sum + product.totalSales, 0);
+  const totalSales = data.topProducts.reduce((sum, product) => sum + (product.totalSales || 0), 0);
   const averageProductPrice = totalRevenue / totalSales;
 
   return (
@@ -145,12 +145,12 @@ const ProductPerformance: React.FC<ProductPerformanceProps> = ({ data, onExport 
                   <span className="text-xl">{getCategoryIcon(product.category)}</span>
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.totalSales} sales</p>
+                    <p className="text-sm text-gray-500">{product.totalSales || 0} sales</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">${product.totalRevenue.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">${product.averagePrice.toFixed(2)} avg</p>
+                  <p className="font-semibold text-gray-900">${(product.totalRevenue || 0).toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">${(product.averagePrice || 0).toFixed(2)} avg</p>
                 </div>
               </div>
             ))}
@@ -198,9 +198,9 @@ const ProductPerformance: React.FC<ProductPerformanceProps> = ({ data, onExport 
                 <h4 className="font-medium text-gray-900">{product.name}</h4>
               </div>
               <div className="space-y-1 text-sm">
-                <p className="text-gray-600">Sales: {product.totalSales}</p>
-                <p className="text-gray-600">Revenue: ${product.totalRevenue.toLocaleString()}</p>
-                <p className="text-gray-600">Avg Price: ${product.averagePrice.toFixed(2)}</p>
+                <p className="text-gray-600">Sales: {product.totalSales || 0}</p>
+                <p className="text-gray-600">Revenue: ${(product.totalRevenue || 0).toLocaleString()}</p>
+                <p className="text-gray-600">Avg Price: ${(product.averagePrice || 0).toFixed(2)}</p>
               </div>
               <div className="mt-2">
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">

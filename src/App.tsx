@@ -6,6 +6,7 @@ import TrafficAnalysis from './components/Modules/TrafficAnalysis';
 import CustomerInsights from './components/Modules/CustomerInsights';
 import InventoryManagement from './components/Modules/InventoryManagement';
 import ErrorMessage from './components/UI/ErrorMessage';
+import ErrorBoundary from './components/UI/ErrorBoundary';
 import Toast from './components/UI/Toast';
 import { useAnalytics } from './hooks/useAnalytics';
 
@@ -26,7 +27,13 @@ const App: React.FC = () => {
 
   const renderModule = () => {
     if (error) {
-      return <ErrorMessage message={error} onRetry={refreshData} />;
+      return (
+        <ErrorMessage 
+          error={error} 
+          onRetry={error.retryable ? refreshData : undefined}
+          showTimestamp={true}
+        />
+      );
     }
 
     switch (activeModule) {
@@ -46,7 +53,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
+    <ErrorBoundary>
       <DashboardLayout
         activeModule={activeModule}
         onModuleChange={setActiveModule}
@@ -64,7 +71,7 @@ const App: React.FC = () => {
           onClose={() => removeToast(toast.id)}
         />
       ))}
-    </>
+    </ErrorBoundary>
   );
 };
 
